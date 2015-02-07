@@ -9,7 +9,8 @@ output:
 
 ## Preparing the environment
 
-```{r, echo = TRUE, results = 'hide', message=FALSE}
+
+```r
 library(dplyr)
 library(ggplot2)
 Sys.setlocale("LC_TIME", "en_US.UTF-8")
@@ -17,7 +18,8 @@ Sys.setlocale("LC_TIME", "en_US.UTF-8")
 
 ## Loading and preprocessing the data
 
-```{r}
+
+```r
 if(!file.exists("activity.zip")) {
       fileUrl <-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
       download.file(fileUrl, "activity.zip", method = "curl")
@@ -37,17 +39,21 @@ activity <- tbl_df(activity)
 
 ## What is mean total number of steps taken per day?
 
-```{r}
+
+```r
 totalByDate <- activity %>% group_by(date) %>% summarize(total_steps=sum(steps))
 with(totalByDate, hist(total_steps, main = 'Total steps per day', xlab = 'steps'))
 ```
 
-The mean of steps per day is **`r as.integer(mean(totalByDate$total_steps,na.rm = TRUE)) `**
-and the median is **`r as.integer(median(totalByDate$total_steps,na.rm = TRUE)) `**.
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png) 
+
+The mean of steps per day is **10766**
+and the median is **10765**.
 
 ## What is the average daily activity pattern?
 
-```{r}
+
+```r
 dailyPattern <- activity %>% group_by(time) %>% summarize(average_steps=mean(steps,na.rm = TRUE))
 
 with(dailyPattern, plot(as.POSIXct(strptime(time, "%H:%M")),
@@ -56,18 +62,21 @@ with(dailyPattern, plot(as.POSIXct(strptime(time, "%H:%M")),
                         xlab = "time"))
 ```
 
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png) 
+
 Max number of steps per interval for an average day is 
-**`r as.integer(max(dailyPattern$average_steps))`**.
-This maxinum is achieved at interval **`r dailyPattern[which.max(dailyPattern$average_steps),]$time`**.
+**206**.
+This maxinum is achieved at interval **08:35**.
 
 
 ## Imputing missing values
 
-There are `r missedValues  <- is.na(activity$steps); sum(missedValues) ` lines with NAs in the dataset.
+There are 2304 lines with NAs in the dataset.
 
 Replacing these NAs with daily averages for the same time interval. 
 
-```{r}
+
+```r
 corrAct <- activity
 
 corrAct$av_steps <- ave(corrAct$steps, corrAct$time, FUN = function(x) mean(x, na.rm = TRUE))
@@ -78,14 +87,17 @@ corrByDate <- corrAct %>% group_by(date) %>% summarize(total_corr_steps=sum(corr
 with(corrByDate, hist(total_corr_steps,  main = 'Total steps per day, NAs replaced', xlab = 'steps'))
 ```
 
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5-1.png) 
 
-After replacing NAs with daily averages the mean of steps per day is **`r as.integer(mean(corrByDate$total_corr_steps)) `** and the median is **`r as.integer(median(corrByDate$total_corr_steps)) `**.
+
+After replacing NAs with daily averages the mean of steps per day is **10766** and the median is **10766**.
 
 There are no significant differences between these numbers and the pre-correction results.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r}
+
+```r
 day <- weekdays(corrAct$date)
 corrAct$weekend <- as.factor(ifelse(day=='Sunday' | day=='Saturday', 'weekend', 'weekday'))
 weekdayPattern <- corrAct %>% group_by(time,weekend) %>% summarize(average_steps=mean(steps,na.rm = TRUE))
@@ -98,4 +110,6 @@ plot <- ggplot(data = weekdayPattern, aes(x=strptime(time, "%H:%M"),y=average_st
 
 print(plot)
 ```
+
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png) 
 
