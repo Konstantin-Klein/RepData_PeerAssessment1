@@ -1,16 +1,17 @@
 ---
 title: 'Reproducible Research: Peer Assessment 1'
 output:
-  word_document: default
-  pdf_document: default
   html_document:
     keep_md: yes
+  pdf_document: default
+  word_document: default
 ---
 
 ## Preparing the environment
 
 ```{r, echo = TRUE, results = 'hide', message=FALSE}
 library(dplyr)
+library(ggplot2)
 Sys.setlocale("LC_TIME", "en_US.UTF-8")
 ```
 
@@ -38,16 +39,11 @@ activity <- tbl_df(activity)
 
 ```{r}
 totalByDate <- activity %>% group_by(date) %>% summarize(total_steps=sum(steps))
-
-with(totalByDate, plot(date, total_steps, main = 'Total steps per day', ylab = 'Steps', xlab = 'Date'))
-mean_steps <- mean(totalByDate$total_steps,na.rm = TRUE)
-median_steps <- median(totalByDate$total_steps,na.rm = TRUE)      
-abline(h=mean_steps, col = 'green')
-abline(h=median_steps, col = 'blue')
+with(totalByDate, hist(total_steps, main = 'Total steps per day', xlab = 'steps'))
 ```
 
-The mean of steps per day is **`r as.integer(mean_steps) `**
-and the median is **`r as.integer(median_steps) `**.
+The mean of steps per day is **`r as.integer(mean(totalByDate$total_steps,na.rm = TRUE)) `**
+and the median is **`r as.integer(median(totalByDate$total_steps,na.rm = TRUE)) `**.
 
 ## What is the average daily activity pattern?
 
@@ -67,14 +63,39 @@ This maxinum is achieved at interval **`r dailyPattern[which.max(dailyPattern$av
 
 ## Imputing missing values
 
-```{r}
+There are `r missedValues  <- is.na(activity$steps); sum(missedValues) ` lines with NSa in the dataset.
 
+Replacing these NSa with daily averages for the same time interval. 
+
+```{r}
+corrAct <- activity
+
+corrAct$av_steps <- ave(corrAct$steps, corrAct$time, FUN = function(x) mean(x, na.rm = TRUE))
+corrAct$corr_steps <- ifelse(is.na(corrAct$steps), corrAct$av_steps, corrAct$steps) 
+
+corrByDate <- corrAct %>% group_by(date) %>% summarize(total_corr_steps=sum(corr_steps))
+
+with(corrByDate, hist(total_corr_steps,  main = 'Total steps per day, NAs replaced', xlab = 'steps'))
 ```
 
+
+After replacing NAs with daily averages the mean of steps per day is **`r as.integer(mean(corrByDate$total_corr_steps)) `** and the median is **`r as.integer(median(corrByDate$total_corr_steps)) `**.
+
+There are no significant differences between these numbers and the pre-correction results.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 ```{r}
+day <- weekdays(corrAct$date)
+corrAct$weekend <- as.factor(ifelse(day=='Sunday' | day=='Saturday', 'weekend', 'weekday'))
+weekdayPattern <- corrAct %>% group_by(time,weekend) %>% summarize(average_steps=mean(steps,na.rm = TRUE))
 
+plot <- ggplot(data = weekdayPattern, aes(x=strptime(time, "%H:%M"),y=average_steps)) +
+      geom_line(stat = "identity", width=0.6, color = "black", fill = "brown") +
+      facet_grid(weekend~.) +
+      ggtitle("Daily pattern, weekdays vs. weekend") + xlab("time of day") + ylab("average steps") +
+      scale_x_datetime(breaks = "4 hour", labels = c('','02:00','06:00','10:00','14:00','18:00','22:00',''))
+
+print(plot)
 ```
 
