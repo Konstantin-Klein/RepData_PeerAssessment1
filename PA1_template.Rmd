@@ -1,8 +1,10 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+output:
+  word_document: default
+  pdf_document: default
   html_document:
-    keep_md: true
+    keep_md: yes
 ---
 
 ## Preparing the environment
@@ -25,6 +27,10 @@ if(!file.exists(filename)) unzip("activity.zip")
 
 activity <- read.csv(filename, header = TRUE, sep = ',', quote = '\"',stringsAsFactors = FALSE)
 activity$date <- as.Date(activity$date, "%Y-%m-%d")
+d_t <- as.POSIXlt(activity$date)
+d_t$hour <- activity$interval %/% 100
+d_t$min <- activity$interval %% 100
+activity$time <- substr(as.POSIXct(d_t), 12, 16)
 activity <- tbl_df(activity)
 ```
 
@@ -40,12 +46,35 @@ abline(h=mean_steps, col = 'green')
 abline(h=median_steps, col = 'blue')
 ```
 
+The mean of steps per day is **`r as.integer(mean_steps) `**
+and the median is **`r as.integer(median_steps) `**.
+
 ## What is the average daily activity pattern?
 
+```{r}
+dailyPattern <- activity %>% group_by(time) %>% summarize(average_steps=mean(steps,na.rm = TRUE))
+
+with(dailyPattern, plot(as.POSIXct(strptime(time, "%H:%M")),
+                        average_steps, type = "l", lwd = 3,
+                        main = "Daily activity pattern",
+                        xlab = "time"))
+```
+
+Max number of steps per interval for an average day is 
+**`r as.integer(max(dailyPattern$average_steps))`**.
+This maxinum is achieved at interval **`r dailyPattern[which.max(dailyPattern$average_steps),]$time`**.
 
 
 ## Imputing missing values
 
+```{r}
+
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+
+```
+
